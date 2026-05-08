@@ -1,19 +1,22 @@
-import com.android.build.api.dsl.androidLibrary
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.android.kotlin.multiplatform.library)
     alias(libs.plugins.vanniktech.mavenPublish)
+    alias(libs.plugins.kotlinSerialization)
+    alias(libs.plugins.ktorfit)
+    alias(libs.plugins.ksp)
+    alias(libs.plugins.room)
 }
 
-group = "io.github.kotlin"
-version = "1.0.0"
+group = "Combonary"
+version = "1.0.1"
 
 kotlin {
     jvm()
-    androidLibrary {
-        namespace = "org.jetbrains.kotlinx.multiplatform.library.template"
+    android {
+        namespace = "com.combonary.tmdb"
         compileSdk = libs.versions.android.compileSdk.get().toInt()
         minSdk = libs.versions.android.minSdk.get().toInt()
 
@@ -24,10 +27,10 @@ kotlin {
         }
 
         compilations.configureEach {
-            compilerOptions.configure {
-                jvmTarget.set(
-                    JvmTarget.JVM_11
-                )
+            compileTaskProvider.configure {
+                compilerOptions {
+                    jvmTarget.set(JvmTarget.JVM_11)
+                }
             }
         }
     }
@@ -37,46 +40,95 @@ kotlin {
     linuxX64()
 
     sourceSets {
-        commonMain.dependencies {
-            //put your multiplatform dependencies here
+        commonMain {
+            kotlin.srcDir(layout.buildDirectory.dir("generated/ksp/metadata/commonMain/kotlin"))
+            kotlin.exclude("**/*_Impl.kt")
+            kotlin.exclude("**/MovieDatabaseConstructor.kt")
+            dependencies {
+                implementation(libs.ktor.client.core)
+                implementation(libs.ktor.client.content.negotiation)
+                implementation(libs.ktor.serialization.kotlinx.json)
+                implementation(libs.ktorfit.lib)
+                implementation(libs.room.runtime)
+                implementation(libs.sqlite.bundled)
+            }
         }
 
         commonTest.dependencies {
             implementation(libs.kotlin.test)
+            implementation(libs.ktor.client.mock)
+            implementation(libs.kotlinx.coroutines.test)
         }
     }
 }
 
 mavenPublishing {
-    publishToMavenCentral()
+    // publishToMavenCentral()
 
-    signAllPublications()
+    //signAllPublications()
 
-    coordinates(group.toString(), "library", version.toString())
+    coordinates(group.toString(), "MoviesService", version.toString())
 
     pom {
-        name = "My library"
-        description = "A library."
-        inceptionYear = "2024"
-        url = "https://github.com/kotlin/multiplatform-library-template/"
+        name = "Tmdb service"
+        description = "A Kotlin Multiplatform library for TMDB API integration."
+        inceptionYear = "2026"
+        url = "https://github.com/combonary/MoviesService/"
         licenses {
             license {
-                name = "XXX"
-                url = "YYY"
-                distribution = "ZZZ"
+                name = "The Apache License, Version 2.0"
+                url = "http://www.apache.org/licenses/LICENSE-2.0.txt"
+                distribution = "repo"
             }
         }
         developers {
             developer {
-                id = "XXX"
-                name = "YYY"
-                url = "ZZZ"
+                id = "Combonary"
+                name = "Pascal Adjaero"
+                url = "https://github.com/Combonary/"
             }
         }
         scm {
-            url = "XXX"
-            connection = "YYY"
-            developerConnection = "ZZZ"
+            url = "https://github.com/Combonary/MoviesService/"
+            connection = "scm:git:git://github.com/Combonary/MoviesService.git"
+            developerConnection = "scm:git:ssh://github.com/Combonary/MoviesService.git"
         }
     }
+}
+
+publishing {
+    repositories {
+        maven {
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/Combonary/MoviesService")
+            credentials {
+                username = project.findProperty("gpr.user") as String? ?: System.getenv("GITHUB_ACTOR")
+                password = project.findProperty("gpr.key") as String? ?: System.getenv("GITHUB_TOKEN")
+            }
+        }
+    }
+}
+
+dependencies {
+    add("kspCommonMainMetadata", libs.ktorfit.ksp)
+    add("kspAndroid", libs.room.compiler)
+    add("kspIosArm64", libs.room.compiler)
+    add("kspIosSimulatorArm64", libs.room.compiler)
+    add("kspIosX64", libs.room.compiler)
+    add("kspJvm", libs.room.compiler)
+    add("kspLinuxX64", libs.room.compiler)
+}
+
+tasks.matching { it.name.contains("compile", ignoreCase = true) || (it.name.startsWith("ksp") && it.name != "kspCommonMainKotlinMetadata") }.configureEach {
+    mustRunAfter(tasks.matching { it.name == "kspCommonMainKotlinMetadata" })
+    dependsOn(tasks.matching { it.name == "kspCommonMainKotlinMetadata" })
+}
+
+
+room {
+    schemaDirectory("$projectDir/schemas")
+}
+
+ktorfit {
+    compilerPluginVersion = "2.3.4"
 }
