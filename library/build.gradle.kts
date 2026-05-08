@@ -102,8 +102,8 @@ publishing {
             name = "GitHubPackages"
             url = uri("https://maven.pkg.github.com/Combonary/MoviesService")
             credentials {
-                username = project.findProperty("gpr.user") as String? ?: System.getenv("GITHUB_ACTOR")
-                password = project.findProperty("gpr.key") as String? ?: System.getenv("GITHUB_TOKEN")
+                username = providers.environmentVariable("GITHUB_ACTOR").orElse(providers.gradleProperty("gpr.user")).get()
+                password = providers.environmentVariable("GITHUB_TOKEN").orElse(providers.gradleProperty("gpr.key")).get()
             }
         }
     }
