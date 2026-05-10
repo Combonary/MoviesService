@@ -3,15 +3,15 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.android.kotlin.multiplatform.library)
-    alias(libs.plugins.vanniktech.mavenPublish)
     alias(libs.plugins.kotlinSerialization)
     alias(libs.plugins.ktorfit)
     alias(libs.plugins.ksp)
     alias(libs.plugins.room)
+    `maven-publish`
 }
 
-group = "Combonary"
-version = "1.0.1"
+group = "io.github.combonary"
+version = "1.0.2"
 
 kotlin {
     jvm()
@@ -62,40 +62,6 @@ kotlin {
     }
 }
 
-mavenPublishing {
-    // publishToMavenCentral()
-
-    //signAllPublications()
-
-    coordinates(group.toString(), "MoviesService", version.toString())
-
-    pom {
-        name = "Tmdb service"
-        description = "A Kotlin Multiplatform library for TMDB API integration."
-        inceptionYear = "2026"
-        url = "https://github.com/combonary/MoviesService/"
-        licenses {
-            license {
-                name = "The Apache License, Version 2.0"
-                url = "http://www.apache.org/licenses/LICENSE-2.0.txt"
-                distribution = "repo"
-            }
-        }
-        developers {
-            developer {
-                id = "Combonary"
-                name = "Pascal Adjaero"
-                url = "https://github.com/Combonary/"
-            }
-        }
-        scm {
-            url = "https://github.com/Combonary/MoviesService/"
-            connection = "scm:git:git://github.com/Combonary/MoviesService.git"
-            developerConnection = "scm:git:ssh://github.com/Combonary/MoviesService.git"
-        }
-    }
-}
-
 publishing {
     repositories {
         maven {
@@ -124,6 +90,9 @@ tasks.matching { it.name.contains("compile", ignoreCase = true) || (it.name.star
     dependsOn(tasks.matching { it.name == "kspCommonMainKotlinMetadata" })
 }
 
+tasks.named("sourcesJar").configure {
+    dependsOn(tasks.named("kspCommonMainKotlinMetadata"))
+}
 
 room {
     schemaDirectory("$projectDir/schemas")
