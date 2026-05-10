@@ -41,7 +41,7 @@ dependencyResolutionManagement {
 
 // app/build.gradle.kts
 dependencies {
-    implementation("io.github.combonary:MoviesService:1.0.2")
+    implementation("io.github.combonary:library-android:1.0.2")
 }
 ```
 
