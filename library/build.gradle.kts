@@ -1,4 +1,5 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.util.Properties
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -61,6 +62,12 @@ kotlin {
         }
     }
 }
+// Load local.properties
+val localProperties = Properties()
+val localPropertiesFile = project.rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localProperties.load(localPropertiesFile.inputStream())
+}
 
 publishing {
     repositories {
@@ -68,8 +75,10 @@ publishing {
             name = "GitHubPackages"
             url = uri("https://maven.pkg.github.com/Combonary/MoviesService")
             credentials {
-                username = providers.environmentVariable("GITHUB_ACTOR").orElse(providers.gradleProperty("gpr.user")).get()
-                password = providers.environmentVariable("GITHUB_TOKEN").orElse(providers.gradleProperty("gpr.key")).get()
+                username = System.getenv("GITHUB_ACTOR")
+                    ?: localProperties.getProperty("gpr.user")
+                password = System.getenv("GITHUB_TOKEN")
+                    ?: localProperties.getProperty("gpr.key")
             }
         }
     }
