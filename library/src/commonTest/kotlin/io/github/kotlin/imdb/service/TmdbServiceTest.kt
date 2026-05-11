@@ -1,18 +1,17 @@
 package io.github.kotlin.imdb.service
 
-import de.jensklingenberg.ktorfit.Ktorfit
-import io.ktor.client.*
-import io.ktor.client.engine.mock.*
-import io.ktor.client.plugins.contentnegotiation.*
-import io.ktor.http.*
-import io.ktor.serialization.kotlinx.json.*
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.mock.MockEngine
+import io.ktor.client.engine.mock.respond
+import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpStatusCode
+import io.ktor.http.headersOf
 import kotlinx.coroutines.test.runTest
-import kotlinx.serialization.json.Json
 import kotlin.test.Test
+import kotlin.test.assertContains
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 
-class ImdbServiceTest {
+class TmdbServiceTest {
 
     @Test
     fun testGetPopularMovies() = runTest {
@@ -48,22 +47,39 @@ class ImdbServiceTest {
             )
         }
 
-        val client = HttpClient(mockEngine) {
-            install(ContentNegotiation) {
-                json(Json { ignoreUnknownKeys = true })
-            }
-        }
+        val client = HttpClient(mockEngine)
 
-        val ktorfit = Ktorfit.Builder()
-            .baseUrl("https://api.example.com/")
-            .httpClient(client)
-            .build()
-
-        val service = ktorfit.createImdbService()
+        val service = provideTmdbService(
+            baseUrl = "https://api.example.com/",
+            httpClient = client,
+            token = "test_token"
+        )
         val popularMovies = service.getPopularMovies()
 
         assertEquals(1, popularMovies.results.size)
         assertEquals("Test Movie", popularMovies.results[0].title)
-        assertTrue(popularMovies.results[0].genre_ids.contains(1))
+        assertContains(popularMovies.results[0].genreIds, 1)
+    }
+
+    @Test
+    fun testAuthenticationHeader() = runTest {
+        var authHeader: String? = null
+        val mockEngine = MockEngine { request ->
+            authHeader = request.headers[HttpHeaders.Authorization]
+            respond(
+                content = """{"page": 1, "results": [], "total_pages": 1, "total_results": 0}""",
+                status = HttpStatusCode.OK,
+                headers = headersOf(HttpHeaders.ContentType, "application/json")
+            )
+        }
+
+        val service = provideTmdbService(
+            baseUrl = "https://api.example.com/",
+            httpClient = HttpClient(mockEngine),
+            token = "test_token"
+        )
+
+        service.getPopularMovies()
+        assertEquals("Bearer test_token", authHeader)
     }
 }

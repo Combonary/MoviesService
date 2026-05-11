@@ -6,7 +6,7 @@ import de.jensklingenberg.ktorfit.http.Path
 import io.github.kotlin.imdb.model.MovieDescription
 import io.github.kotlin.imdb.model.TrendingMovies
 
-interface ImdbService {
+interface TmdbService {
     /**
      * Fetch list of trending movies for the week
      */
