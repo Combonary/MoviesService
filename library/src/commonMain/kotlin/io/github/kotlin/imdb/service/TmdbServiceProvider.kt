@@ -21,15 +21,13 @@ fun provideTmdbService(
     httpClient: HttpClient? = null,
     token: String
 ): TmdbService {
-    val client = if (httpClient != null) {
-        // Wrap the provided client with token support
-        httpClient.config {
-            defaultRequest {
-                header("Authorization", "Bearer $token")
-            }
+    val client = httpClient?.// Wrap the provided client with token support
+    config {
+        defaultRequest {
+            header("Authorization", "Bearer $token")
         }
-    } else {
-        HttpClient {
+    }
+        ?: HttpClient {
             install(Logging) {
                 level = LogLevel.INFO
                 logger = Logger.DEFAULT
@@ -67,7 +65,6 @@ fun provideTmdbService(
                 }
             }
         }
-    }
 
     val ktorfit = Ktorfit.Builder()
         .baseUrl(baseUrl)
