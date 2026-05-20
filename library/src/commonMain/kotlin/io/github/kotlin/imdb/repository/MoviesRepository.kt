@@ -6,6 +6,7 @@ import io.github.kotlin.imdb.model.toEntity
 import io.github.kotlin.imdb.service.TmdbService
 import io.github.kotlin.imdb.utils.TmdbException
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 
 /**
  * Repository that handles the coordination between the network (TMDB API)
@@ -36,7 +37,19 @@ class MoviesRepository(
 
     /**
      * Convenience method to get a specific movie by ID.
-     * (You might want to add a DAO method for this later).
+     * Checks the database first, and if not found, fetches from the network
+     * and saves it to the database for future use.
      */
-    suspend fun getMovieById(id: Int) = tmdbService.getMovie(id)
+    suspend fun getMovieById(id: Int): MovieEntity {
+        return movieDao.getMovieById(id).first() ?: tmdbService.getMovie(id).toEntity().also {
+            movieDao.insertMovie(it)
+        }
+    }
+
+    /**
+     * Inserts or updates a single movie in the local database.
+     */
+    suspend fun insertMovie(movie: MovieEntity) {
+        movieDao.insertMovie(movie)
+    }
 }

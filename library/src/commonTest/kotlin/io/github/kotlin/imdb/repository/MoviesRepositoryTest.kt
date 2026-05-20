@@ -33,7 +33,16 @@ class FakeMovieDao : MovieDao {
         _movies.value = movies
     }
 
+    override suspend fun insertMovie(movieEntity: MovieEntity) {
+        insertedMovies = listOf(movieEntity)
+        _movies.value = _movies.value + movieEntity
+    }
+
     override fun getAllMovies(): Flow<List<MovieEntity>> = _movies
+
+    override fun getMovieById(id: Int): Flow<MovieEntity?> {
+        return MutableStateFlow(_movies.value.find { it.id == id })
+    }
 
     override suspend fun clearAll() {
         _movies.value = emptyList()
@@ -73,22 +82,56 @@ class MoviesRepositoryTest {
     }
 
     @Test
-    fun getMovieByIdShouldFetchFromNetwork() = runTest {
+    fun getMovieByIdShouldFetchFromNetworkAndSaveToDb() = runTest {
         val fakeTmdbService = FakeTmdbService()
         val fakeMovieDao = FakeMovieDao()
         val repository = MoviesRepository(fakeTmdbService, fakeMovieDao)
 
-        val expectedMovie = MovieDescription(
+        val expectedMovieDescription = MovieDescription(
             id = 1,
-            title = "Test Movie",
+            title = "Network Movie",
             overview = "Overview",
             posterPath = "/path",
+            backdropPath = "/backdrop",
+            voteAverage = 8.0,
+            releaseDate = "2024-01-01",
+            popularity = 10.0,
             genres = listOf(Genres(1, "Action"))
         )
-        fakeTmdbService.movieToReturn = expectedMovie
+        fakeTmdbService.movieToReturn = expectedMovieDescription
 
         val result = repository.getMovieById(1)
 
-        assertEquals(expectedMovie, result)
+        assertEquals("Network Movie", result.title)
+        // Verify it was saved to the DB
+        assertEquals(1, fakeMovieDao.insertedMovies.size)
+        assertEquals("Network Movie", fakeMovieDao.insertedMovies[0].title)
+    }
+
+    @Test
+    fun getMovieByIdShouldReturnFromDbIfAvailable() = runTest {
+        val fakeTmdbService = FakeTmdbService()
+        val fakeMovieDao = FakeMovieDao()
+        val repository = MoviesRepository(fakeTmdbService, fakeMovieDao)
+
+        val dbMovie = MovieEntity(
+            id = 1,
+            title = "DB Movie",
+            overview = "Overview",
+            posterPath = "/path",
+            backdropPath = "/backdrop",
+            voteAverage = 8.0,
+            releaseDate = "2024-01-01",
+            popularity = 10.0,
+            genreIds = listOf(1)
+        )
+        fakeMovieDao.insertMovies(listOf(dbMovie))
+
+        // This should NOT be called
+        fakeTmdbService.movieToReturn = null 
+
+        val result = repository.getMovieById(1)
+
+        assertEquals("DB Movie", result.title)
     }
 }
